@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>SmartGuard AI · interactive prototype</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Chart.js 4 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0b0f17;
+            color: #eef2f6;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            grid-template-rows: 70px 1fr;
+            height: 100vh;
+            background: #0b0f17;
+            transition: all 0.2s;
+        }
+
+        /* top navbar */
+        .top-nav {
+            grid-column: 1 / 3;
+            grid-row: 1;
+            background: #101520;
+            border-bottom: 1px solid #262f3f;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px 0 20px;
+            z-index: 20;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .system-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: default;
+        }
+
+        .system-badge .material-icons-round {
+            color: #3b82f6;
+            font-size: 30px;
+        }
+
+        .system-badge span:not(.material-icons-round) {
+            font-weight: 700;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, #a6c9ff, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-live {
+            background: #1a2c3c;
+            color: #4ade80;
+            padding: 6px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #2f4b5c;
+        }
+
+        .status-live::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #4ade80;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .global-search {
+            background: #1e2635;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            padding: 6px 16px;
+            gap: 8px;
+            border: 1px solid #2b354a;
+        }
+
+        .global-search input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #cdd9f0;
+            font-size: 0.9rem;
+            width: 200px;
+        }
+
+        .global-search input::placeholder {
+            color: #68748e;
+        }
+
+        .global-search .material-icons-round {
+            color: #5f6b84;
+            font-size: 20px;
+        }
+
+        .alert-icon {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .alert-icon .material-icons-round {
+            font-size: 28px;
+            color: #b0c0d4;
+        }
+
+        .alert-badge {
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            background: #ef4444;
+            color: white;
+            border-radius: 20px;
+            padding: 2px 7px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 2px solid #101520;
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #1e2635;
+            padding: 5px 10px 5px 12px;
+            border-radius: 40px;
+            border: 1px solid #2f3b50;
+            cursor: pointer;
+        }
+
+        /* sidebar */
+        .sidebar {
+            grid-column: 1;
+            grid-row: 2;
+            background: #0f141e;
+            border-right: 1px solid #202汼;
+            overflow-y: auto;
+            padding: 20px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            color: #9aa8c0;
+            transition: all 0.2s;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+
+        .menu-item .material-icons-round {
+            font-size: 24px;
+            color: #68728c;
+        }
+
+        .menu-item.active {
+            background: #1f2a3f;
+            color: white;
+        }
+
+        .menu-item.active .material-icons-round {
+            color: #3b82f6;
+        }
+
+        .menu-item:hover:not(.active) {
+            background: #1a2232;
+            color: #d3ddec;
+        }
+
+        /* main panel – pages */
+        .main-panel {
+            grid-column: 2;
+            grid-row: 2;
+            background: #0b0f17;
+            overflow-y: auto;
+            padding: 24px 28px;
+        }
+
+        /* page container (active page) */
+        .page {
+            display: none;
+            animation: fade 0.2s ease;
+        }
+
+        .page.active-page {
+            display: block;
+        }
+
+        @keyframes fade { from { opacity:0.3; } to { opacity:1; } }
+
+        /* cards, tables etc */
+        .metrics-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .metric-card {
+            background: #131a26;
+            border-radius: 24px;
+            padding: 20px 22px;
+            flex: 1 1 160px;
+            min-width: 150px;
+            border: 1px solid #253040;
+        }
+
+        .metric-title {
+            color: #8f9eb5;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .metric-tag {
+            font-size: 0.85rem;
+            margin-top: 6px;
+        }
+
+        .green-tag { color: #4ade80; }
+        .yellow-tag { color: #fbbf24; }
+        .red-tag { color: #f87171; }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .chart-card {
+            background: #131a26;
+            border-radius: 24px;
+            padding: 20px 16px;
+            border: 1px solid #253040;
+            height: 230px;
+        }
+
+        .visual-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .visual-card {
+            background: #131a26;
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid #253040;
+        }
+
+        .table-container {
+            background: #131a26;
+            border-radius: 24px;
+            padding: 12px 6px 12px 16px;
+            border: 1px solid #253040;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            color: #8494ae;
+            font-weight: 500;
+            padding: 12px 4px;
+        }
+
+        td {
+            padding: 14px 4px;
+            border-bottom: 1px solid #1f2a38;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            width: fit-content;
+        }
+
+        .approved { background: #1a3a2c; color: #4ade80; }
+        .blocked { background: #3f2424; color: #f87171; }
+        .review { background: #3d311f; color: #fbbf24; }
+
+        .blink-row {
+            background: #2f2028;
+            animation: blink-bg 1.5s infinite;
+        }
+
+        @keyframes blink-bg {
+            0% { background: #2f2028; } 50% { background: #511f1f; } 100% { background: #2f2028; }
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .btn:active { background: #2d3b4f; }
+
+        .explain-box {
+            background: #101725;
+            border-left: 4px solid #3b82f6;
+            padding: 12px 18px;
+            border-radius: 16px;
+            margin: 18px 0;
+            color: #b7c5dd;
+        }
+
+        /* Responsive */
+        @media (max-width: 800px) {
+            .app-grid { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .charts-row { grid-template-columns: 1fr; }
+            .visual-row { grid-template-columns: 1fr; }
+        }
+
+        /* fraud alert rows */
+        .alert-row-high { background: #2f1c1c; }
+        .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chip { background: #253040; padding: 4px 10px; border-radius: 40px; font-size:0.8rem; }
+    </style>
+</head>
+<body>
+<div class="app-grid">
+    <!-- TOP NAV -->
+    <div class="top-nav">
+        <div class="nav-left">
+            <div class="system-badge"><span class="material-icons-round">security</span><span>SmartGuard AI</span></div>
+            <div class="status-live">LIVE · protecting</div>
+        </div>
+        <div class="nav-right">
+            <div class="global-search"><span class="material-icons-round">search</span><input placeholder="User / Txn ID"></div>
+            <div class="alert-icon" onclick="switchPage('fraudAlertsPage')"><span class="material-icons-round">notifications</span><span class="alert-badge">12</span></div>
+            <div class="admin-profile"><span class="material-icons-round">account_circle</span><span>Admin</span><span class="material-icons-round">arrow_drop_down</span></div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR (clickable items) -->
+    <div class="sidebar" id="sidebar">
+        <button class="menu-item active" data-page="dashboardPage"><span class="material-icons-round">dashboard</span>Dashboard</button>
+        <button class="menu-item" data-page="liveTxPage"><span class="material-icons-round">bolt</span>Live Transactions</button>
+        <button class="menu-item" data-page="fraudAlertsPage"><span class="material-icons-round">warning</span>Fraud Alerts</button>
+        <button class="menu-item" data-page="userRiskPage"><span class="material-icons-round">person_search</span>User Risk Profiles</button>
+        <button class="menu-item" data-page="analyticsPage"><span class="material-icons-round">analytics</span>Analytics & Reports</button>
+        <button class="menu-item" data-page="deviceIntelPage"><span class="material-icons-round">devices</span>Device Intelligence</button>
+        <button class="menu-item" data-page="ruleModelPage"><span class="material-icons-round">rule</span>Rule & Model Settings</button>
+        <button class="menu-item" data-page="investigationPage"><span class="material-icons-round">gavel</span>Investigation Panel</button>
+        <button class="menu-item" data-page="logsPage"><span class="material-icons-round">assignment</span>Logs & Compliance</button>
+        <button class="menu-item" data-page="settingsPage"><span class="material-icons-round">settings</span>Settings</button>
+    </div>
+
+    <!-- MAIN PANEL (all pages) -->
+    <div class="main-panel">
+        <!-- DASHBOARD page -->
+        <div id="dashboardPage" class="page active-page">
+            <div class="metrics-row"><div class="metric-card"><div class="metric-title">TOTAL TODAY</div><div class="metric-value">284.2k</div><div class="metric-tag green-tag">⬆ +12%</div></div><div class="metric-card"><div class="metric-title">FRAUD DETECTED</div><div class="metric-value">147</div><div class="metric-tag red-tag">⚠ +3 high</div></div><div class="metric-card"><div class="metric-title">FRAUD RATE</div><div class="metric-value">0.052%</div><div class="metric-tag yellow-tag">↘ -0.01%</div></div><div class="metric-card"><div class="metric-title">HIGH-RISK</div><div class="metric-value">32</div><div class="metric-tag red-tag">🚨 critical</div></div><div class="metric-card"><div class="metric-title">AVG RISK</div><div class="metric-value">47</div><div class="metric-tag yellow-tag">medium</div></div><div class="metric-card"><div class="metric-title">FALSE POSITIVE</div><div class="metric-value">8.2%</div><div class="metric-tag green-tag">↓ -2%</div></div></div>
+            <div class="charts-row"><div class="chart-card"><h4>📈 Fraud trend</h4><canvas id="trendChart" style="height:160px; width:100%"></canvas></div><div class="chart-card"><h4>💰 Txn vs fraud</h4><canvas id="volumeChart" style="height:160px;"></canvas></div><div class="chart-card"><h4>🎲 Risk distribution</h4><canvas id="histogramChart" style="height:160px;"></canvas></div></div>
+            <div class="visual-row"><div class="visual-card"><span>🌍 geo heat</span><div style="background:#14202e; height:90px; border-radius:16px; margin-top:8px; display:flex; align-items:center; justify-content:center; background: radial-gradient(circle at 20% 40%, #27496d 10%, transparent 20%), radial-gradient(circle at 70% 60%, #aa4e4e 15%, transparent 25%);">🌎 clusters</div></div><div class="visual-card"><span>🥧 channel fraud</span><canvas id="pieChart" style="height:90px;"></canvas></div><div class="visual-card"><span>📱 device type</span><canvas id="barChart" style="height:90px;"></canvas></div></div>
+            <div style="margin-top:20px;"><div class="table-container"><table><thead><tr><th>Txn ID</th><th>User</th><th>Amount</th><th>Risk</th><th>Status</th></tr></thead><tbody><tr><td>TXN421</td><td>rajesh_01</td><td>₹49,200</td><td><span style="color:#f87171;">92</span></td><td><span class="status-badge blocked">BLOCKED</span></td></tr><tr class="blink-row"><td>TXN987</td><td>neha_k</td><td>₹1,12,000</td><td><span style="color:#fbbf24;">78</span></td><td><span class="status-badge review">REVIEW</span></td></tr></tbody></table></div></div>
+            <div class="explain-box"><span class="material-icons-round" style="float:right;">psychology</span><strong>🔍 AI:</strong> new device, location spike, velocity +20</div>
+        </div>
+
+        <!-- LIVE TRANSACTIONS page -->
+        <div id="liveTxPage" class="page">
+            <h2 style="margin-bottom:16px;">⚡ Live transaction stream</h2>
+            <div class="footer-actions"><span class="btn"><span class="material-icons-round">filter_alt</span>filter</span><span class="btn"><span class="material-icons-round">refresh</span>auto-refresh on</span><span class="btn"><span class="material-icons-round">pause</span>pause</span></div>
+            <div class="table-container" style="margin-top:16px;">
+                <table><thead><tr><th>Txn ID</th><th>User</th><th>Amount</th><th>Location</th><th>Device</th><th>Channel</th><th>Risk</th><th>Status</th></tr></thead>
+                <tbody>
+                    <tr class="blink-row"><td>TXN101</td><td>amit_k</td><td>₹82,000</td><td>Jaipur</td><td>OnePlus</td><td>UPI</td><td><span style="color:#f87171;">94</span></td><td><span class="status-badge blocked">BLOCKED</span></td></tr>
+                    <tr><td>TXN102</td><td>sneha_r</td><td>₹3,200</td><td>Pune</td><td>iPhone12</td><td>Card</td><td>12</td><td><span class="status-badge approved">APPROVED</span></td></tr>
+                    <tr><td>TXN103</td><td>rohan_d</td><td>₹67,500</td><td>Delhi</td><td>SamsungS23</td><td>NetBank</td><td><span style="color:#fbbf24;">69</span></td><td><span class="status-badge review">REVIEW</span></td></tr>
+                </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FRAUD ALERTS page -->
+        <div id="fraudAlertsPage" class="page">
+            <h2 style="margin-bottom:16px;">🚨 Fraud alerts (12 new)</h2>
+            <div class="table-container">
+                <table><thead><tr><th>Alert ID</th><th>Risk</th><th>Reason summary</th><th>Time</th><th>Actions</th></tr></thead>
+                <tbody>
+                    <tr><td>ALT902</td><td><span style="color:#f87171;">96</span></td><td>New device, unusual location, high amount</td><td>14:23</td><td><div class="action-buttons"><span class="chip">Approve</span><span class="chip">Block</span><span class="chip">Escalate</span></div></td></tr>
+                    <tr><td>ALT901</td><td><span style="color:#f87171;">89</span></td><td>Velocity 12tx/min, emulator</td><td>14:17</td><td><div class="action-buttons"><span class="chip">Approve</span><span class="chip">Block</span><span class="chip">Mark fraud</span></div></td></tr>
+                </tbody>
+                </table>
+            </div>
+            <div class="explain-box"><strong>Risk explanation (ALT902):</strong> +35 new device · +28 location · +20 amount spike</div>
+        </div>
+
+        <!-- USER RISK PROFILES page -->
+        <div id="userRiskPage" class="page">
+            <h2>👤 User risk profile: neha_k</h2>
+            <div class="metrics-row" style="margin-top:16px;">
+                <div class="metric-card"><div class="metric-title">overall risk</div><div class="metric-value" style="color:#fbbf24;">78</div></div>
+                <div class="metric-card"><div class="metric-title">last login</div><div class="metric-value">Delhi</div></div>
+                <div class="metric-card"><div class="metric-title">usual device</div><div class="metric-value">iPhone12</div></div>
+                <div class="metric-card"><div class="metric-title">avg amount</div><div class="metric-value">₹5,200</div></div>
+            </div>
+            <div class="visual-card"><span>📊 behavior pattern (daily spend)</span><canvas id="userSpendChart" style="height:120px;"></canvas></div>
+            <div class="table-container" style="margin-top:16px;"><span>device history</span><table><tr><th>Device</th><th>first seen</th><th>trust score</th></tr><tr><td>iPhone12</td><td>12 Jan</td><td>0.92</td></tr><tr><td>Windows-PC</td><td>today (new)</td><td style="color:#f87171;">0.21</td></tr></table></div>
+        </div>
+
+        <!-- ANALYTICS & REPORTS page -->
+        <div id="analyticsPage" class="page"><h2>📊 analytics & reports</h2><div class="visual-row"><div class="visual-card">📉 fraud trend monthly<br><canvas id="monthlyFraud" style="height:100px;"></canvas></div><div class="visual-card">🥧 top fraud patterns<br><canvas id="patternPie" style="height:100px;"></canvas></div></div><div><span class="btn"><span class="material-icons-round">download</span> download CSV</span></div></div>
+
+        <!-- DEVICE INTELLIGENCE page -->
+        <div id="deviceIntelPage" class="page"><h2>📱 device fingerprint & clusters</h2><div class="table-container"><table><tr><th>Device ID</th><th>users</th><th>risk</th></tr><tr><td>a1b2c3...</td><td>3 users</td><td style="color:#f87171;">shared (suspicious)</td></tr><tr><td>d4e5f6...</td><td>1 user</td><td>trusted</td></tr></table></div><div class="visual-card" style="margin-top:16px;">🌐 IP clusters: 2 suspicious / high fraud region</div></div>
+
+        <!-- RULE & MODEL SETTINGS page -->
+        <div id="ruleModelPage" class="page"><h2>⚙️ rule engine & thresholds</h2><div class="metric-card">risk threshold: 75 <span class="btn" style="margin-left:16px;">adjust</span></div><div class="metric-card">velocity check: 5tx/min <span class="btn">toggle</span></div><div><span class="btn">▶ retrain model (simulate)</span></div></div>
+
+        <!-- INVESTIGATION PANEL page -->
+        <div id="investigationPage" class="page"><h2>🔍 investigation (TXN987)</h2><div class="visual-row"><div class="visual-card">📍 location map: Delhi (unusual)</div><div class="visual-card">📱 device: Win10-PC (new)</div></div><div class="explain-box">⚖️ AI: +30 amount spike · +20 velocity · +25 device</div><div class="table-container">decision log: analyst block · 14:30 · comment "suspicious"</div></div>
+
+        <!-- LOGS & COMPLIANCE page -->
+        <div id="logsPage" class="page"><h2>📜 audit trail & SAR</h2><div class="table-container"><table><tr><th>action</th><th>user/analyst</th><th>timestamp</th></tr><tr><td>blocked TXN421</td><td>sys</td><td>14:22</td></tr><tr><td>approved TXN321</td><td>analyst_j</td><td>14:05</td></tr></table></div><span class="btn" style="margin-top:16px;">📄 generate suspicious activity report</span></div>
+
+        <!-- SETTINGS page -->
+        <div id="settingsPage" class="page"><h2>⚙️ system settings</h2><div>theme · notification · API keys (demo)</div></div>
+    </div>
+</div>
+
+<script>
+    // interactive page switching + active menu
+    const pages = document.querySelectorAll('.page');
+    const menuItems = document.querySelectorAll('.menu-item');
+
+    function switchPage(pageId) {
+        // hide all pages
+        pages.forEach(p => p.classList.remove('active-page'));
+        // show selected
+        const activePage = document.getElementById(pageId);
+        if (activePage) activePage.classList.add('active-page');
+
+        // update active class on sidebar buttons
+        menuItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.page === pageId) {
+                item.classList.add('active');
+            }
+        });
+    }
+
+    // add click listeners to each menu button
+    menuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageId = item.dataset.page;
+            if (pageId) switchPage(pageId);
+        });
+    });
+
+    // also clicking on alert icon goes to fraud alerts
+    document.querySelector('.alert-icon').addEventListener('click', () => switchPage('fraudAlertsPage'));
+
+    // initialize all charts (they need canvas elements)
+    window.onload = function() {
+        // common style
+        const textColor = '#cdd9f0', gridColor = '#2a3442';
+
+        // dashboard charts
+        new Chart(document.getElementById('trendChart'), { type:'line', data: { labels: ['10','11','12','13','14','15'], datasets: [{ data: [2,5,7,12,9,15], borderColor: '#f87171' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x:{grid:{color:gridColor}, ticks:{color:textColor}}, y:{grid:{color:gridColor}, ticks:{color:textColor}} }, plugins:{legend:{display:false}} } });
+        new Chart(document.getElementById('volumeChart'), { type:'bar', data: { labels: ['10','11','12','13','14','15'], datasets: [{ label:'txn', data: [42,48,55,47,62,58], backgroundColor:'#3b82f6' },{ label:'fraud', data: [2,5,7,12,9,15], type:'line', borderColor:'#ef4444', fill:false }] }, options: { scales: { x:{ticks:{color:textColor}}, y:{ticks:{color:textColor}} }, plugins: { legend: { labels: { color: textColor } } } } });
+        new Chart(document.getElementById('histogramChart'), { type:'bar', data: { labels: ['0-20','20-40','40-60','60-80','80-100'], datasets: [{ data: [1240,830,455,210,97], backgroundColor: ['#4ade80','#facc15','#f97316','#f87171','#b91c1c'] }] }, options: { scales: { x:{ticks:{color:textColor}}, y:{ticks:{color:textColor}} }, plugins:{legend:{display:false}} } });
+        new Chart(document.getElementById('pieChart'), { type:'doughnut', data: { labels: ['UPI','Card','NetBank'], datasets: [{ data: [48,33,19], backgroundColor: ['#3b82f6','#f97316','#a855f7'] }] }, options: { plugins: { legend: { labels: { color: textColor } } } } });
+        new Chart(document.getElementById('barChart'), { type:'bar', data: { labels: ['mobile','tablet','desktop'], datasets: [{ data: [58,23,19], backgroundColor: '#3b82f6' }] }, options: { scales: { x:{ticks:{color:textColor}}, y:{ticks:{color:textColor}} }, plugins:{legend:{display:false}} } });
+
+        // extra charts for other pages (quick placeholders)
+        const ctxUser = document.getElementById('userSpendChart')?.getContext('2d');
+        if(ctxUser) new Chart(ctxUser, { type:'line', data: { labels: ['Mon','Tue','Wed','Thu','Fri'], datasets: [{ data: [1200, 3000, 2800, 5000, 11200], borderColor: '#fbbf24' }] }, options: { scales: { x:{ticks:{color:textColor}}, y:{ticks:{color:textColor}} }, plugins:{legend:{display:false}} } });
+
+        const monthlyCtx = document.getElementById('monthlyFraud')?.getContext('2d');
+        if(monthlyCtx) new Chart(monthlyCtx, { type:'line', data: { labels: ['Jan','Feb','Mar'], datasets: [{ data: [45, 58, 72], borderColor: '#f87171' }] }, options: {}});
+
+        const patternCtx = document.getElementById('patternPie')?.getContext('2d');
+        if(patternCtx) new Chart(patternCtx, { type:'doughnut', data: { labels: ['phishing','velocity','new device'], datasets: [{ data: [40,35,25], backgroundColor: ['#ef4444','#f97316','#3b82f6'] }] } });
+    };
+</script>
+<!-- ensure all charts canvas exist even if not rendered (safe) -->
+</body>
+</html>
